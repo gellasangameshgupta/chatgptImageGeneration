@@ -1,0 +1,53 @@
+/**
+ * @description       : 
+ * @author            : Sangamesh Gella - ABSYZ Software Consulting Private Limited
+ * @group             : 
+ * @last modified on  : 07-01-2023
+ * @last modified by  : Sangamesh Gella - ABSYZ Software Consulting Private Limited
+ * Modifications Log
+ * Ver   Date         Author                                                        Modification
+ * 1.0   03-28-2023   Sangamesh Gella - ABSYZ Software Consulting Private Limited   Initial Version
+**/
+public with sharing class ChatGPTCreateImageHandler {
+
+    // from Open AI
+    private static String CHAT_GPT_KEY = YOUR_API_KEY;
+
+    // it's end point mentioned in the Open AI documentation
+    private static final String ENDPOINT ='https://api.openai.com/v1/images/generations';
+    
+    @AuraEnabled
+    public static String getResponse(String searchString){
+        try {
+            Http http = new Http();
+
+            String reqBody = '{"prompt": "'+searchString+'","n": 2,"size": "1024x1024"}';
+
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(ENDPOINT);
+            request.setMethod('POST');
+            request.setHeader('Authorization', 'Bearer '+String.escapeSingleQuotes(CHAT_GPT_KEY).trim());
+
+            //Setting timeout to max 120 second to get whole response from Chat GPT Open API
+            request.setTimeout(120000);
+            request.setHeader('Content-Type', 'application/json;charset=UTF-8');
+            request.setBody(reqBody);
+
+            HttpResponse response = http.send(request);
+
+            // response class to store the details
+            JSON2ApexChatGPTImage res = (JSON2ApexChatGPTImage)JSON.deserialize(response.getBody(), JSON2ApexChatGPTImage.Class);
+            String content = res.data[0].url;
+
+            // Parse the JSON response
+            if(response.getStatusCode() != 200) {
+                System.debug('Error: ' + response.getStatusCode() + ' ' + response.getBody());
+                return response.getBody();
+            }
+            return content;
+        } catch(Exception ex){
+            System.debug('Error '+ ex);
+            throw new AuraHandledException(ex.getMessage());
+        }
+    }
+}
